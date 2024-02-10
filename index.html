@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Unmade Message Encoder</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <style>
+      legend {
+        font-size: 1.2em;
+        font-weight: 900;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <div id="app" style="display: flex; gap: 40px">
+      <div>
+        <fieldset>
+          <legend>Dimensions</legend>
+          Use semiprimes like the Arecibo Message<br />
+          Height: {{dimensions.height}}&nbsp;&nbsp; Width:
+          {{dimensions.width}}&nbsp;&nbsp; Message Length: {{grid.length}}
+          <br />
+          <div
+            :style="`display: flex; flex-wrap: wrap; width:${dimensions.width*22}px`"
+          >
+            <div
+              :style="
+                `
+                background-color: black;
+                margin: 1px;
+                height: 20px;
+                width: 20px;
+                color: white;
+                `
+              "
+              v-for="i in grid"
+            ></div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Graphical Layer</legend>
+          Draw a picture<br />
+          <label>Color:</label>
+          <input
+            type="radio"
+            name="visual_color"
+            v-model="visual.color"
+            value="100"
+          />
+          Red
+          <input
+            type="radio"
+            name="visual_color"
+            v-model="visual.color"
+            value="010"
+          />
+          Green
+          <input
+            type="radio"
+            name="visual_color"
+            v-model="visual.color"
+            value="001"
+          />
+          Blue
+          <br />
+          <div
+            :style="`display: flex; flex-wrap: wrap; width:${dimensions.width*22}px`"
+          >
+            <div
+              :style="
+                  `
+                  background-color: ${v==0?'black':cga[visual.color][0]};
+                  margin: 1px;
+                  height: 20px;
+                  width: 20px;
+                  color: white;
+                  `
+                "
+              v-for="(v,i) in visual.grid"
+              @click="visual.grid[i]=1*!visual.grid[i]"
+            ></div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Morse Code Layer</legend>
+          Convert text to morse code. Dot = 1 bit, Dash = 2 bits, Black in
+          between<br />
+          <label for="dimension_height">Color:</label>
+          <input
+            type="radio"
+            name="morse_color"
+            v-model="morse.color"
+            value="100"
+          />
+          Red
+          <input
+            type="radio"
+            name="morse_color"
+            v-model="morse.color"
+            value="010"
+          />
+          Green
+          <input
+            type="radio"
+            name="morse_color"
+            v-model="morse.color"
+            value="001"
+          />
+          Blue<br />
+          <label>Value</label>
+          <input v-model="morse.word" @keyup="doMorse" />
+          <div
+            :style="`display: flex; 
+            padding: 5px;`"
+          >
+            <div
+              :style="
+                  `
+                  background-color: ${v==0?'black':cga[morse.color][0]};
+                  margin: 1px;
+                  height: 10px;
+                  width: 10px;
+                  `
+                "
+              v-for="(v,i) in morse.grid"
+            ></div>
+          </div>
+          <div
+            :style="`display: flex; flex-wrap: wrap; width:${dimensions.width*22}px`"
+          >
+            <div
+              :style="
+                  `
+                  background-color: ${v==0?'black':cga[morse.color][0]};
+                  margin: 1px;
+                  height: 20px;
+                  width: 20px;
+                  `
+                "
+              v-for="(v,i) in morse.grid"
+            ></div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Ascii Code Layer</legend>
+          Convert letters to ascii, then to 7-bits. One row per letter.
+          <label for="dimension_height">Color:</label>
+          <input
+            type="radio"
+            name="ascii_color"
+            v-model="ascii.color"
+            value="100"
+          />
+          Red
+          <input
+            type="radio"
+            name="ascii_color"
+            v-model="ascii.color"
+            value="010"
+          />
+          Green
+          <input
+            type="radio"
+            name="ascii_color"
+            v-model="ascii.color"
+            value="001"
+          />
+          Blue<br />
+          <label>Value</label>
+          <input v-model="ascii.word" @keyup="doAscii" />
+
+          <div
+            :style="`display: flex; flex-wrap: wrap; width:${dimensions.width*22}px`"
+          >
+            <div
+              :style="
+                    `
+                    background-color: ${v==0?'black':cga[ascii.color][0]};
+                    margin: 1px;
+                    height: 20px;
+                    width: 20px;
+                    `
+                  "
+              v-for="(v,i) in ascii.grid"
+            ></div>
+          </div>
+        </fieldset>
+      </div>
+      <div>
+        <fieldset>
+          <legend>CGA Palette Stacking</legend>
+          Stack the three colored grids. Blending RGB into CMY where there's
+          overlap<br />
+          <div style="padding: 20px">
+            CGA Color Palette:
+            <span
+              :style="`background-color: ${v[0]}; padding:5px; color:white;`"
+              v-for="(v) in Object.values(cga).sort((a,b)=>a[1]>b[1])"
+              >{{v[1]}}</span
+            >
+          </div>
+          Red and Blue = Magenta<br />
+          Blue and Green = Cyan<br />
+          Green and Red = Yellow, (Brown in CGA, I guess)<br />
+          Red, Blue AND Green = White, (Grey in CGA, sadly)<br />
+          <div>{{visual.grid}}</div>
+          <div>{{morse.grid}}</div>
+          <div>{{ascii.grid}}</div>
+          <div>{{cgaGrid.map(v=>v[1])}}</div>
+          <div
+            :style="`display: flex; flex-wrap: wrap; width:${dimensions.width*22}px`"
+          >
+            <div
+              :style="
+                    `
+                    background-color: ${v[0]};
+                    margin: 1px;
+                    height: 20px;
+                    width: 20px;
+                    `
+                  "
+              v-for="(v,i) in cgaGrid"
+            ></div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Output as Audio</legend>
+          Output the grid as a series of telephone DTMF tones.
+          <div>{{cgaGrid.map(v=>v[1])}}</div>
+          <button @click="playDTMF">Play Tones</button>
+        </fieldset>
+      </div>
+    </div>
+
+    <script>
+      const { createApp, ref, computed, onMounted } = Vue;
+      const morseCodeLookup = {
+        A: [1, 0, 1, 1, 0],
+        B: [1, 1, 0, 1, 0, 1, 0, 1, 0],
+        C: [1, 1, 0, 1, 0, 1, 1, 0, 1, 0],
+        D: [1, 1, 0, 1, 0, 1, 0],
+        E: [1, 0],
+        F: [1, 0, 1, 0, 1, 1, 0, 1, 0],
+        G: [1, 1, 0, 1, 1, 0, 1, 0],
+        H: [1, 0, 1, 0, 1, 0, 1, 0],
+        I: [1, 0, 1, 0],
+        J: [1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0],
+        K: [1, 1, 0, 1, 0, 1, 1, 0],
+        L: [1, 0, 1, 1, 0, 1, 0, 1, 0],
+        M: [1, 1, 0, 1, 1, 0],
+        N: [1, 1, 0, 1, 0],
+        O: [1, 1, 0, 1, 1, 0, 1, 1, 0],
+        P: [1, 0, 1, 1, 0, 1, 1, 0, 1, 0],
+        Q: [1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0],
+        R: [1, 0, 1, 1, 0, 1, 0],
+        S: [1, 0, 1, 0, 1, 0],
+        T: [1, 1, 0],
+        U: [1, 0, 1, 0, 1, 1, 0],
+        V: [1, 0, 1, 0, 1, 0, 1, 1, 0],
+        W: [1, 0, 1, 1, 0, 1, 1, 0],
+        X: [1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0],
+        Y: [1, 1, 0, 1, 0, 1, 0, 1, 1, 0],
+        Z: [1, 1, 0, 1, 1, 0, 1, 0, 1, 0],
+        " ": [],
+      };
+
+      createApp({
+        setup() {
+          // rgb to cga mapping (ish)
+          const cga = {
+            "000": ["black", 0],
+            "001": ["blue", 1],
+            "010": ["green", 2],
+            "011": ["cyan", 3],
+            100: ["red", 4],
+            101: ["magenta", 5],
+            110: ["brown", 6], // yellowish?
+            111: ["grey", 7], // white-adjacent
+          };
+
+          const dimensions = ref({
+            height: 5,
+            width: 7,
+          });
+
+          const grid = computed(() =>
+            Array.from({
+              length: dimensions.value.height * dimensions.value.width,
+            }).map((e) => 0)
+          );
+          const visual = ref({
+            color: "100",
+            grid: [],
+          });
+          const morse = ref({
+            color: "010",
+            grid: [],
+            word: " H I Y A",
+          });
+          const ascii = ref({
+            color: "001",
+            grid: [],
+            word: "BRADY",
+          });
+
+          const cgaGrid = computed(() => {
+            return grid.value.map((_, i) => {
+              const vBit = visual.value.grid[i];
+              const mBit = morse.value.grid[i];
+              const aBit = ascii.value.grid[i];
+              const red =
+                (vBit && visual.value.color == "100") ||
+                (mBit && morse.value.color == "100") ||
+                (aBit && ascii.value.color == "100")
+                  ? 1
+                  : 0;
+              const green =
+                (vBit && visual.value.color == "010") ||
+                (mBit && morse.value.color == "010") ||
+                (aBit && ascii.value.color == "010")
+                  ? 1
+                  : 0;
+              const blue =
+                (vBit && visual.value.color == "001") ||
+                (mBit && morse.value.color == "001") ||
+                (aBit && ascii.value.color == "001")
+                  ? 1
+                  : 0;
+              const key = [red, green, blue].join("");
+              return cga[key] || [0, 0];
+            });
+          });
+
+          onMounted(() => {
+            visual.value.grid = [
+              1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+              0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1,
+            ];
+            doMorse();
+            doAscii();
+          });
+          function doMorse() {
+            morse.value.grid = morse.value.word
+              .split("")
+              .flatMap((letter) => [...morseCodeLookup[letter], 0]);
+          }
+          function doAscii() {
+            ascii.value.grid = ascii.value.word.split("").flatMap((letter) => {
+              return (letter.charCodeAt(0) & 0b01111111)
+                .toString(2)
+                .split("")
+                .map((v) => v * 1);
+            });
+          }
+
+          function playDTMF() {
+            const tones = {
+              0: [1336, 941],
+              1: [1209, 697],
+              2: [1336, 697],
+              3: [1477, 697],
+              4: [1209, 770],
+              5: [1336, 770],
+              6: [1477, 770],
+              7: [1209, 852],
+              8: [1336, 852],
+              9: [1477, 852],
+            };
+            const context = new (window.AudioContext ||
+              window.webkitAudioContext)();
+
+            cgaGrid.value.map(v=>v[1]).forEach((v, i) => {
+              const oscillator1 = context.createOscillator();
+              oscillator1.connect(context.destination);
+              oscillator1.type = 0;
+              oscillator1.frequency.setValueAtTime(
+                tones[v][0],
+                context.currentTime + i / 5
+              );
+              oscillator1.start(context.currentTime + i / 5);
+              oscillator1.stop(context.currentTime + i / 5 + 0.1);
+
+              const oscillator2 = context.createOscillator();
+              oscillator2.connect(context.destination);
+              oscillator2.type = 0;
+              oscillator2.frequency.setValueAtTime(
+                tones[v][1],
+                context.currentTime + i / 5
+              );
+              oscillator2.start(context.currentTime + i / 5);
+              oscillator2.stop(context.currentTime + i / 5 + 0.1);
+            });
+          }
+
+          return {
+            cga,
+            cgaGrid,
+            dimensions,
+            grid,
+            visual,
+            morse,
+            ascii,
+
+            doMorse,
+            doAscii,
+            playDTMF,
+          };
+        },
+      }).mount("#app");
+    </script>
+  </body>
+</html>
